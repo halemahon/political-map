@@ -1,14 +1,14 @@
-// Initialize the map
+// Initialize the map and tile layer
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+  attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap contributors'
 }).addTo(map);
 
 let infoBox = document.getElementById('info');
 let boundaryLayer = null;
 
-// 🔎 Mayor lookup table
+// Mayor name lookup table
 const mayorLookup = {
   "BARRIE": "Alex Nuttall",
   "SPRINGWATER": "Jennifer Coughlin",
@@ -24,7 +24,7 @@ const mayorLookup = {
   "BRADFORD WEST GWILLIMBURY": "James Leduc"
 };
 
-// Load municipal boundaries
+// Load GeoJSON of municipal boundaries
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
@@ -38,7 +38,7 @@ fetch('Municipal_BordersPolygon.geojson')
     infoBox.innerHTML = "Could not load municipal boundary data.";
   });
 
-// Track user location
+// Start tracking user location
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
@@ -61,11 +61,16 @@ navigator.geolocation.watchPosition(pos => {
     let mayor = mayorLookup[name.toUpperCase()] || "Unknown";
 
     if (turf.booleanPointInPolygon(point, polygon)) {
-      console.log("✅ Match found:", name);
-      infoBox.innerHTML = `
-        You're in: <strong>${name}</strong><br>
-        Mayor: <strong>${mayor}</strong>
-      `;
+      // Capitalize name and mayor
+      let formattedName = name.charAt(0) + name.slice(1).toLowerCase();
+      let formattedMayor = mayor.split(' ').map(w =>
+        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      ).join(' ');
+
+      infoBox.innerHTML =
+        `<strong>Municipality:</strong> ${formattedName}\n` +
+        `<strong>Mayor:</strong> ${formattedMayor}`;
+
       found = true;
     }
   });
