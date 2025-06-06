@@ -1,4 +1,4 @@
-// Start zoomed out; zoom in once GPS is found
+// Start map zoomed out; will zoom in once location is found
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -6,36 +6,46 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 let infoBox = document.getElementById('info');
-let boundaryLayer;
+let boundaryLayer = null; // We'll set this once the data loads
 
-// Load your county's municipal boundary file
+// Load your municipal boundary file
 fetch('Municipal_BordersPolygon.json')
   .then(res => res.json())
   .then(data => {
     boundaryLayer = L.geoJSON(data, {
       style: { color: 'green', weight: 2 }
     }).addTo(map);
+    console.log("Municipal boundaries loaded:", data.features.length, "features");
+  })
+  .catch(err => {
+    console.error("Failed to load municipal boundaries:", err);
+    infoBox.innerHTML = "Failed to load boundary data.";
   });
 
-// Get and watch user's location
+// Watch the user's location
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
 
-  map.setView([lat, lon], 13); // Zoom to user's location
+  console.log("Your coordinates:", lat, lon);
+
+  // Zoom to user's location
+  map.setView([lat, lon], 13);
 
   let point = turf.point([lon, lat]);
   let found = false;
 
-  boundaryLayer.eachLayer(layer => {
-    let polygon = layer.feature;
+  if (boundaryLayer && boundaryLayer.eachLayer) {
+    boundaryLayer.eachLayer(layer => {
+      let polygon = layer.feature;
 
-    if (turf.booleanPointInPolygon(point, polygon)) {
-      // Use the exact property name you confirmed: "Name"
-      infoBox.innerHTML = "You're in: <strong>" + polygon.properties.Name + "</strong>";
-      found = true;
-    }
-  });
+      if (turf.booleanPointInPolygon(point, polygon)) {
+        // Display the municipality name from the "Name" field
+        infoBox.innerHTML = "You're in: <strong>" + polygon.properties.Name + "</strong>";
+        found = true;
+      }
+    });
+  }
 
   if (!found) {
     infoBox.innerHTML = "You're outside the known municipal boundaries.";
@@ -44,4 +54,3 @@ navigator.geolocation.watchPosition(pos => {
 }, err => {
   infoBox.innerHTML = "Could not get your location.";
 });
-
