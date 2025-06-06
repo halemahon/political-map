@@ -1,3 +1,8 @@
+// Check if Turf.js is loaded
+if (typeof turf === "undefined") {
+  alert("🚨 Turf.js is NOT loaded! Please include it in index.html");
+}
+
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -45,6 +50,7 @@ let wardDataLoaded = false;
 
 function checkReadyToWatch() {
   if (municipalDataLoaded && wardDataLoaded) {
+    console.log("✅ Both data files loaded. Starting geolocation...");
     startWatchingLocation();
   }
 }
@@ -57,25 +63,25 @@ fetch('Municipal_BordersPolygon.geojson')
       style: { color: 'green', weight: 2 }
     }).addTo(map);
     municipalDataLoaded = true;
+    console.log("✅ Municipal data loaded. Features:", data.features.length);
     checkReadyToWatch();
   });
 
-// Load ward boundaries and buffer each polygon ONCE
+// Load and buffer ward boundaries
 fetch('Municipal_Ward_BoundaryPolygon.geojson')
   .then(res => res.json())
   .then(data => {
-    // Create Leaflet layer for display
     wardLayer = L.geoJSON(data, {
       style: { color: 'blue', weight: 2, dashArray: '4' }
     }).addTo(map);
 
-    // Buffer each ward polygon once
+    console.log("✅ Ward data loaded. Features:", data.features.length);
+
     data.features.forEach(feature => {
+      const label = feature.properties.Label || "";
       const buffered = turf.buffer(feature, 0.015, { units: "kilometers" });
-      bufferedWardFeatures.push({
-        geometry: buffered,
-        label: feature.properties.Label
-      });
+      bufferedWardFeatures.push({ geometry: buffered, label: label });
+      console.log("📦 Buffered ward:", label);
     });
 
     wardDataLoaded = true;
@@ -107,7 +113,6 @@ function startWatchingLocation() {
       });
     }
 
-    // Check buffered ward features
     bufferedWardFeatures.forEach(feature => {
       if (turf.booleanPointInPolygon(point, feature.geometry)) {
         const wardNum = (feature.label || "").replace(/\D/g, "");
