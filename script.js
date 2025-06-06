@@ -1,4 +1,4 @@
-// Create the map and set a temporary zoomed-out view
+// Initialize the map
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -24,7 +24,7 @@ const mayorLookup = {
   "BRADFORD WEST GWILLIMBURY": "James Leduc"
 };
 
-// Load GeoJSON file of municipal boundaries
+// Load municipal boundaries
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
@@ -38,7 +38,7 @@ fetch('Municipal_BordersPolygon.geojson')
     infoBox.innerHTML = "Could not load municipal boundary data.";
   });
 
-// Watch user's GPS position
+// Track user location
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
