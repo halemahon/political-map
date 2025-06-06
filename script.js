@@ -97,7 +97,7 @@ function startWatchingLocation() {
 
     if (wardLayer) {
       wardLayer.eachLayer(layer => {
-        const rawWard = layer.feature.properties.Ward;
+        const rawWard = layer.feature.properties.Label;
         if (turf.booleanPointInPolygon(point, layer.feature)) {
           const wardNum = (rawWard || "").replace(/\D/g, "");
           ward = wardNum;
