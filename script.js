@@ -1,4 +1,4 @@
-// Initialize map
+// Initialize the map
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -9,7 +9,7 @@ let infoBox = document.getElementById('info');
 let municipalLayer = null;
 let wardLayer = null;
 
-// ✅ Mayor lookup
+// Mayor lookup table
 const mayorLookup = {
   "BARRIE": "Alex Nuttall",
   "SPRINGWATER": "Jennifer Coughlin",
@@ -25,7 +25,7 @@ const mayorLookup = {
   "BRADFORD WEST GWILLIMBURY": "James Leduc"
 };
 
-// ✅ Councillor lookup
+// Councillor lookup table
 const councillorLookup = {
   "BARRIE": {
     "1": "Clare Riepma", "2": "Craig Nixon", "3": "Ann-Marie Kungl",
@@ -51,8 +51,8 @@ fetch('Municipal_BordersPolygon.geojson')
     }).addTo(map);
   });
 
-// Load ward boundaries
-fetch('Municipal_Ward_BoundaryPolygon.json')
+// Load ward boundaries (updated file name)
+fetch('Municipal_Ward_BoundaryPolygon.geojson')
   .then(res => res.json())
   .then(data => {
     wardLayer = L.geoJSON(data, {
@@ -72,7 +72,7 @@ navigator.geolocation.watchPosition(pos => {
   let ward = "Unknown";
   let councillor = "Unknown";
 
-  // Match municipality
+  // Find matching municipality
   if (municipalLayer) {
     municipalLayer.eachLayer(layer => {
       const name = layer.feature.properties.Name;
@@ -84,23 +84,24 @@ navigator.geolocation.watchPosition(pos => {
     });
   }
 
-  // Match ward
+  // Find matching ward
   if (wardLayer) {
     wardLayer.eachLayer(layer => {
-      const wardName = layer.feature.properties.Ward;
+      const rawWard = layer.feature.properties.Ward;
       if (turf.booleanPointInPolygon(point, layer.feature)) {
-        ward = wardName;
+        // Extract just the number (e.g., from "Ward 2")
+        const wardNum = (rawWard || "").replace(/\D/g, "");
+        ward = wardNum;
 
-        // Only add councillor if municipality is known
         const munKey = municipality.toUpperCase();
-        if (councillorLookup[munKey] && councillorLookup[munKey][ward]) {
-          councillor = councillorLookup[munKey][ward];
+        if (councillorLookup[munKey] && councillorLookup[munKey][wardNum]) {
+          councillor = councillorLookup[munKey][wardNum];
         }
       }
     });
   }
 
-  // Display results
+  // Display result
   if (municipality === "Unknown") {
     infoBox.innerHTML = "You're outside the known municipal boundaries.";
   } else {
