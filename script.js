@@ -39,7 +39,6 @@ const councillorLookup = {
   }
 };
 
-// Track when both files are loaded
 let municipalDataLoaded = false;
 let wardDataLoaded = false;
 
@@ -71,13 +70,14 @@ fetch('Municipal_Ward_BoundaryPolygon.geojson')
     checkReadyToWatch();
   });
 
-// Wait until both layers are ready before watching location
 function startWatchingLocation() {
   navigator.geolocation.watchPosition(pos => {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     map.setView([lat, lon], 13);
     const point = turf.point([lon, lat]);
+
+    console.log("📍 Location:", lat, lon);
 
     let municipality = "Unknown";
     let mayor = "Unknown";
@@ -97,9 +97,11 @@ function startWatchingLocation() {
 
     if (wardLayer) {
       wardLayer.eachLayer(layer => {
-        const rawWard = layer.feature.properties.Label;
-        if (turf.booleanPointInPolygon(point, layer.feature)) {
-          const wardNum = (rawWard || "").replace(/\D/g, "");
+        const rawLabel = layer.feature.properties.Label;
+        const wardNum = (rawLabel || "").replace(/\D/g, "");
+        // Buffer each ward polygon slightly to allow for GPS drift
+        const buffered = turf.buffer(layer.feature, 0.015, { units: "kilometers" });
+        if (turf.booleanPointInPolygon(point, buffered)) {
           ward = wardNum;
           const munKey = municipality.toUpperCase();
           if (councillorLookup[munKey] && councillorLookup[munKey][wardNum]) {
