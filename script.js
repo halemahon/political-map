@@ -1,8 +1,3 @@
-// Check if Turf.js is loaded
-if (typeof turf === "undefined") {
-  alert("🚨 Turf.js is NOT loaded! Please include it in index.html");
-}
-
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -81,7 +76,6 @@ fetch('Municipal_Ward_BoundaryPolygon.geojson')
       const label = feature.properties.Label || "";
       const buffered = turf.buffer(feature, 0.015, { units: "kilometers" });
       bufferedWardFeatures.push({ geometry: buffered, label: label });
-      console.log("📦 Buffered ward:", label);
     });
 
     wardDataLoaded = true;
