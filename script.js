@@ -1,3 +1,4 @@
+// Create the map and set a temporary zoomed-out view
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -7,7 +8,23 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let infoBox = document.getElementById('info');
 let boundaryLayer = null;
 
-// Load the municipal boundaries GeoJSON
+// 🔎 Mayor lookup table
+const mayorLookup = {
+  "BARRIE": "Alex Nuttall",
+  "SPRINGWATER": "Jennifer Coughlin",
+  "ORO-MEDONTE": "Randy Greenlaw",
+  "RAMARA": "Basil Clarke",
+  "ADJALA-TOSORONTIO": "Scott Anderson",
+  "SEVERN": "Mike Burkett",
+  "INNISFIL": "Lynn Dollin",
+  "TINY": "David Evans",
+  "MIDLAND": "Bill Gordon",
+  "COLLINGWOOD": "Yvonne Hamlin",
+  "PENETANGUISHENE": "Dan La Rose",
+  "BRADFORD WEST GWILLIMBURY": "James Leduc"
+};
+
+// Load GeoJSON file of municipal boundaries
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
@@ -21,14 +38,14 @@ fetch('Municipal_BordersPolygon.geojson')
     infoBox.innerHTML = "Could not load municipal boundary data.";
   });
 
-// Watch the user's location
+// Watch user's GPS position
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
 
   console.log("📍 Your coordinates:", lat, lon);
-
   map.setView([lat, lon], 13);
+
   let point = turf.point([lon, lat]);
 
   if (!boundaryLayer) {
@@ -41,14 +58,15 @@ navigator.geolocation.watchPosition(pos => {
   boundaryLayer.eachLayer(layer => {
     let polygon = layer.feature;
     let name = polygon.properties.Name;
+    let mayor = mayorLookup[name.toUpperCase()] || "Unknown";
 
-    // DEBUG: See which areas it's testing
     if (turf.booleanPointInPolygon(point, polygon)) {
-      console.log("✅ Match found: " + name);
-      infoBox.innerHTML = "You're in: <strong>" + name + "</strong>";
+      console.log("✅ Match found:", name);
+      infoBox.innerHTML = `
+        You're in: <strong>${name}</strong><br>
+        Mayor: <strong>${mayor}</strong>
+      `;
       found = true;
-    } else {
-      console.log("❌ Not in: " + name);
     }
   });
 
