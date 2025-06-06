@@ -1,4 +1,5 @@
-let map = L.map('map').setView([45.4215, -75.6972], 12); // Default: Ottawa
+// Start the map zoomed out; we'll zoom in after getting location
+let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
@@ -7,36 +8,37 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let infoBox = document.getElementById('info');
 let boundaryLayer;
 
-// Load sample GeoJSON
-fetch('sample.geojson')
+// Load your actual federal ridings file (GeoJSON format, even if named .json)
+fetch('federal_ridings.json')
   .then(res => res.json())
   .then(data => {
     boundaryLayer = L.geoJSON(data, {
-      style: { color: 'blue', weight: 2 }
+      style: { color: 'blue', weight: 1 }
     }).addTo(map);
   });
 
-// Watch user's location
+// Track the user's location and update the view/info
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
 
-  map.setView([lat, lon]);
+  // Center and zoom in on user's location
+  map.setView([lat, lon], 13);
 
   let point = turf.point([lon, lat]);
-
   let found = false;
 
   boundaryLayer.eachLayer(layer => {
     let polygon = layer.feature;
     if (turf.booleanPointInPolygon(point, polygon)) {
-      infoBox.innerHTML = "You're in: <strong>" + polygon.properties.name + "</strong>";
+      // Use the EDNAME field for riding name (standard in Elections Canada data)
+      infoBox.innerHTML = "You're in: <strong>" + polygon.properties.EDNAME + "</strong>";
       found = true;
     }
   });
 
   if (!found) {
-    infoBox.innerHTML = "You're outside the test area.";
+    infoBox.innerHTML = "You're outside any riding area.";
   }
 
 }, err => {
