@@ -1,4 +1,3 @@
-// Start the map zoomed out; it will zoom in when your location is found
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -8,7 +7,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let infoBox = document.getElementById('info');
 let boundaryLayer = null;
 
-// Load the corrected municipal boundaries
+// Load the municipal boundaries GeoJSON
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
@@ -41,10 +40,15 @@ navigator.geolocation.watchPosition(pos => {
 
   boundaryLayer.eachLayer(layer => {
     let polygon = layer.feature;
+    let name = polygon.properties.Name;
 
+    // DEBUG: See which areas it's testing
     if (turf.booleanPointInPolygon(point, polygon)) {
-      infoBox.innerHTML = "You're in: <strong>" + polygon.properties.Name + "</strong>";
+      console.log("✅ Match found: " + name);
+      infoBox.innerHTML = "You're in: <strong>" + name + "</strong>";
       found = true;
+    } else {
+      console.log("❌ Not in: " + name);
     }
   });
 
