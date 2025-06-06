@@ -7,6 +7,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let infoBox = document.getElementById('info');
 let municipalLayer = null;
 let wardLayer = null;
+let bufferedWardFeatures = [];
 
 const mayorLookup = {
   "BARRIE": "Alex Nuttall",
@@ -59,13 +60,24 @@ fetch('Municipal_BordersPolygon.geojson')
     checkReadyToWatch();
   });
 
-// Load ward boundaries
+// Load ward boundaries and buffer each polygon ONCE
 fetch('Municipal_Ward_BoundaryPolygon.geojson')
   .then(res => res.json())
   .then(data => {
+    // Create Leaflet layer for display
     wardLayer = L.geoJSON(data, {
       style: { color: 'blue', weight: 2, dashArray: '4' }
     }).addTo(map);
+
+    // Buffer each ward polygon once
+    data.features.forEach(feature => {
+      const buffered = turf.buffer(feature, 0.015, { units: "kilometers" });
+      bufferedWardFeatures.push({
+        geometry: buffered,
+        label: feature.properties.Label
+      });
+    });
+
     wardDataLoaded = true;
     checkReadyToWatch();
   });
@@ -95,21 +107,18 @@ function startWatchingLocation() {
       });
     }
 
-    if (wardLayer) {
-      wardLayer.eachLayer(layer => {
-        const rawLabel = layer.feature.properties.Label;
-        const wardNum = (rawLabel || "").replace(/\D/g, "");
-        // Buffer each ward polygon slightly to allow for GPS drift
-        const buffered = turf.buffer(layer.feature, 0.015, { units: "kilometers" });
-        if (turf.booleanPointInPolygon(point, buffered)) {
-          ward = wardNum;
-          const munKey = municipality.toUpperCase();
-          if (councillorLookup[munKey] && councillorLookup[munKey][wardNum]) {
-            councillor = councillorLookup[munKey][wardNum];
-          }
+    // Check buffered ward features
+    bufferedWardFeatures.forEach(feature => {
+      if (turf.booleanPointInPolygon(point, feature.geometry)) {
+        const wardNum = (feature.label || "").replace(/\D/g, "");
+        ward = wardNum;
+
+        const munKey = municipality.toUpperCase();
+        if (councillorLookup[munKey] && councillorLookup[munKey][wardNum]) {
+          councillor = councillorLookup[munKey][wardNum];
         }
-      });
-    }
+      }
+    });
 
     if (municipality === "Unknown") {
       infoBox.innerHTML = "You're outside the known municipal boundaries.";
