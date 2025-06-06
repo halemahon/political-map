@@ -1,4 +1,3 @@
-// Start map zoomed out; will zoom in once location is found
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -6,7 +5,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 let infoBox = document.getElementById('info');
-let boundaryLayer = null; // We'll set this once the data loads
+let boundaryLayer = null;
 
 // Load your municipal boundary file
 fetch('Municipal_BordersPolygon.json')
@@ -15,10 +14,10 @@ fetch('Municipal_BordersPolygon.json')
     boundaryLayer = L.geoJSON(data, {
       style: { color: 'green', weight: 2 }
     }).addTo(map);
-    console.log("Municipal boundaries loaded:", data.features.length, "features");
+    console.log("✅ Municipal boundaries loaded.");
   })
   .catch(err => {
-    console.error("Failed to load municipal boundaries:", err);
+    console.error("❌ Failed to load municipal boundaries:", err);
     infoBox.innerHTML = "Failed to load boundary data.";
   });
 
@@ -27,27 +26,25 @@ navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
 
-  console.log("Your coordinates:", lat, lon);
-
-  // Zoom to user's location
+  console.log("📍 Your location:", lat, lon);
   map.setView([lat, lon], 13);
 
   let point = turf.point([lon, lat]);
   let found = false;
 
-  if (boundaryLayer && boundaryLayer.eachLayer) {
+  if (boundaryLayer) {
     boundaryLayer.eachLayer(layer => {
       let polygon = layer.feature;
-
       if (turf.booleanPointInPolygon(point, polygon)) {
-        // Display the municipality name from the "Name" field
         infoBox.innerHTML = "You're in: <strong>" + polygon.properties.Name + "</strong>";
         found = true;
       }
     });
+  } else {
+    console.warn("⏳ Boundary data not loaded yet.");
   }
 
-  if (!found) {
+  if (!found && boundaryLayer) {
     infoBox.innerHTML = "You're outside the known municipal boundaries.";
   }
 
