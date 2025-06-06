@@ -6,9 +6,10 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 let infoBox = document.getElementById('info');
-let boundaryLayer = null;
+let municipalLayer = null;
+let wardLayer = null;
 
-// 🔎 Mayor lookup table
+// Mayor lookup table
 const mayorLookup = {
   "BARRIE": "Alex Nuttall",
   "SPRINGWATER": "Jennifer Coughlin",
@@ -24,63 +25,68 @@ const mayorLookup = {
   "BRADFORD WEST GWILLIMBURY": "James Leduc"
 };
 
-// Load GeoJSON boundary data
+// Load municipal boundaries
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
-    boundaryLayer = L.geoJSON(data, {
+    municipalLayer = L.geoJSON(data, {
       style: { color: 'green', weight: 2 }
     }).addTo(map);
-    console.log("✅ Municipal boundaries loaded:", data.features.length);
-  })
-  .catch(err => {
-    console.error("❌ Failed to load boundary file:", err);
-    infoBox.innerHTML = "Could not load municipal boundary data.";
+    console.log("✅ Municipal boundaries loaded");
   });
 
-// Watch and respond to user location
+// Load ward boundaries
+fetch('Municipal_Ward_BoundaryPolygon.json')
+  .then(res => res.json())
+  .then(data => {
+    wardLayer = L.geoJSON(data, {
+      style: { color: 'blue', weight: 2, dashArray: '4' }
+    }).addTo(map);
+    console.log("✅ Ward boundaries loaded");
+  });
+
+// Watch GPS position
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
-
-  console.log("📍 Your coordinates:", lat, lon);
   map.setView([lat, lon], 13);
 
-  let point = turf.point([lon, lat]);
+  const point = turf.point([lon, lat]);
 
-  if (!boundaryLayer) {
-    console.warn("⏳ Boundary data not loaded yet.");
-    return;
+  let municipality = "Unknown";
+  let mayor = "Unknown";
+  let ward = "Unknown";
+
+  // Check municipal match
+  if (municipalLayer) {
+    municipalLayer.eachLayer(layer => {
+      const name = layer.feature.properties.Name;
+      if (turf.booleanPointInPolygon(point, layer.feature)) {
+        municipality = name.charAt(0) + name.slice(1).toLowerCase();
+        const mayorRaw = mayorLookup[name.toUpperCase()] || "Unknown";
+        mayor = mayorRaw.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+      }
+    });
   }
 
-  let found = false;
+  // Check ward match
+  if (wardLayer) {
+    wardLayer.eachLayer(layer => {
+      const wardName = layer.feature.properties.Ward;
+      if (turf.booleanPointInPolygon(point, layer.feature)) {
+        ward = wardName;
+      }
+    });
+  }
 
-  boundaryLayer.eachLayer(layer => {
-    let polygon = layer.feature;
-    let name = polygon.properties.Name;
-
-    if (turf.booleanPointInPolygon(point, polygon)) {
-      // Format name: "BARRIE" → "Barrie"
-      let formattedName = name.charAt(0) + name.slice(1).toLowerCase();
-
-      // Look up mayor and format: "ALEX NUTTALL" → "Alex Nuttall"
-      let rawMayor = mayorLookup[name.toUpperCase()] || "Unknown";
-      let formattedMayor = rawMayor.split(' ').map(w =>
-        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-      ).join(' ');
-
-      // Show result
-      infoBox.innerHTML =
-        `<strong>Municipality:</strong> ${formattedName}\n` +
-        `<strong>Mayor:</strong> ${formattedMayor}`;
-
-      console.log(`✅ Match found: ${formattedName}, Mayor: ${formattedMayor}`);
-      found = true;
-    }
-  });
-
-  if (!found) {
+  // Show result
+  if (municipality === "Unknown") {
     infoBox.innerHTML = "You're outside the known municipal boundaries.";
+  } else {
+    infoBox.innerHTML =
+      `<strong>Municipality:</strong> ${municipality}\n` +
+      `<strong>Mayor:</strong> ${mayor}\n` +
+      `<strong>Ward:</strong> ${ward}`;
   }
 
 }, err => {
