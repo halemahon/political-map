@@ -1,4 +1,4 @@
-// Initialize the map and tile layer
+// Initialize the map
 let map = L.map('map').setView([0, 0], 2);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -8,7 +8,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let infoBox = document.getElementById('info');
 let boundaryLayer = null;
 
-// Mayor name lookup table
+// 🔎 Mayor lookup table
 const mayorLookup = {
   "BARRIE": "Alex Nuttall",
   "SPRINGWATER": "Jennifer Coughlin",
@@ -24,7 +24,7 @@ const mayorLookup = {
   "BRADFORD WEST GWILLIMBURY": "James Leduc"
 };
 
-// Load GeoJSON of municipal boundaries
+// Load GeoJSON boundary data
 fetch('Municipal_BordersPolygon.geojson')
   .then(res => res.json())
   .then(data => {
@@ -38,7 +38,7 @@ fetch('Municipal_BordersPolygon.geojson')
     infoBox.innerHTML = "Could not load municipal boundary data.";
   });
 
-// Start tracking user location
+// Watch and respond to user location
 navigator.geolocation.watchPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
@@ -58,19 +58,23 @@ navigator.geolocation.watchPosition(pos => {
   boundaryLayer.eachLayer(layer => {
     let polygon = layer.feature;
     let name = polygon.properties.Name;
-    let mayor = mayorLookup[name.toUpperCase()] || "Unknown";
 
     if (turf.booleanPointInPolygon(point, polygon)) {
-      // Capitalize name and mayor
+      // Format name: "BARRIE" → "Barrie"
       let formattedName = name.charAt(0) + name.slice(1).toLowerCase();
-      let formattedMayor = mayor.split(' ').map(w =>
+
+      // Look up mayor and format: "ALEX NUTTALL" → "Alex Nuttall"
+      let rawMayor = mayorLookup[name.toUpperCase()] || "Unknown";
+      let formattedMayor = rawMayor.split(' ').map(w =>
         w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
       ).join(' ');
 
+      // Show result
       infoBox.innerHTML =
         `<strong>Municipality:</strong> ${formattedName}\n` +
         `<strong>Mayor:</strong> ${formattedMayor}`;
 
+      console.log(`✅ Match found: ${formattedName}, Mayor: ${formattedMayor}`);
       found = true;
     }
   });
